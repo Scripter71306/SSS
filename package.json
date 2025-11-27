@@ -1,0 +1,14 @@
+{
+  "name": "schutz-snap-proxy",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "puppeteer": "^22.0.0",
+    "novnc": "^1.4.0",
+    "ws": "^8.14.2"
+  }
+}
